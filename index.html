@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#dadbd8" />
+  <title>ORBIT 旋转戒指 | 3D 产品展示</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <style>
+    :root {
+      --ink: #191b1c;
+      --muted: #666a6d;
+      --surface: #d9dad7;
+      --paper: #f0f0ed;
+      --line: rgba(25, 27, 28, .16);
+      --silver: #c7c9c8;
+      --graphite: #25282a;
+      --signal: #9a3f2e;
+      --shadow: 0 24px 70px rgba(24, 26, 27, .16);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; background: var(--surface); color: var(--ink); font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    body { margin: 0; min-width: 320px; overflow-x: hidden; background: var(--surface); }
+    button { font: inherit; color: inherit; }
+    button:focus-visible, a:focus-visible { outline: 3px solid rgba(154, 63, 46, .36); outline-offset: 3px; }
+
+    .hero { position: relative; height: 100svh; min-height: 640px; overflow: hidden; isolation: isolate; background: linear-gradient(115deg, #f0f0ed 0%, #d7d8d5 48%, #c7c9c7 100%); }
+    .hero::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(255,255,255,.5), transparent 44%), radial-gradient(circle at 68% 42%, rgba(255,255,255,.42), transparent 34%); }
+    .scene-wrap { position: absolute; inset: 0; z-index: 0; cursor: grab; }
+    .scene-wrap:active { cursor: grabbing; }
+    #scene { display: block; width: 100%; height: 100%; }
+    .grain { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: .045; mix-blend-mode: multiply; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitchTiles'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E"); }
+
+    .topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 12; min-height: 72px; padding: 18px clamp(20px, 4vw, 64px); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); pointer-events: none; }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 700; pointer-events: auto; }
+    .brand-mark { width: 28px; height: 28px; border: 5px solid var(--ink); border-radius: 50%; position: relative; }
+    .brand-mark::after { content: ""; position: absolute; inset: 3px -9px 3px 7px; border: 2px solid var(--signal); border-radius: 50%; }
+    .edition { color: var(--muted); font-size: 11px; font-weight: 600; }
+    .view-switch { pointer-events: auto; display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 6px; background: rgba(244,244,241,.58); backdrop-filter: blur(12px); }
+    .view-switch button { min-width: 64px; height: 34px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 600; }
+    .view-switch button[aria-pressed="true"] { background: var(--graphite); color: #fff; }
+
+    .intro { position: absolute; z-index: 5; left: clamp(20px, 5vw, 76px); top: 50%; width: min(320px, 29vw); transform: translateY(-45%); pointer-events: none; }
+    .eyebrow { margin: 0 0 14px; color: var(--signal); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(44px, 5.5vw, 82px); line-height: .9; letter-spacing: 0; font-weight: 500; }
+    .subtitle { margin: 22px 0 0; max-width: 280px; color: var(--muted); font-size: 15px; line-height: 1.75; }
+    .spec-line { display: flex; gap: 24px; margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--line); }
+    .spec-line span { display: block; color: var(--muted); font-size: 10px; }
+    .spec-line strong { display: block; margin-top: 5px; font-size: 13px; font-weight: 650; }
+
+    .toolrail { position: absolute; z-index: 12; right: clamp(18px, 3vw, 42px); top: 50%; transform: translateY(-50%); display: grid; gap: 8px; }
+    .icon-button { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: rgba(244,244,241,.76); box-shadow: 0 6px 18px rgba(25,27,28,.07); backdrop-filter: blur(12px); cursor: pointer; transition: transform .2s ease, background .2s ease, color .2s ease; }
+    .icon-button:hover { transform: translateY(-2px); background: #f8f8f6; }
+    .icon-button[aria-pressed="true"] { background: var(--graphite); color: #fff; }
+    .icon-button svg { width: 18px; height: 18px; stroke-width: 1.8; }
+    .mode-label { position: absolute; z-index: 6; right: clamp(80px, 8vw, 126px); bottom: 30px; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; pointer-events: none; }
+
+    .anatomy-stage { position: absolute; z-index: 9; right: clamp(76px, 8vw, 126px); top: 96px; width: min(420px, calc(100% - 40px)); text-align: right; opacity: 0; transform: translateY(-10px); pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
+    .anatomy-stage.is-active { opacity: 1; transform: translateY(0); }
+    .anatomy-stage span { display: block; color: var(--signal); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .anatomy-stage strong { display: block; margin-top: 7px; font-size: 19px; font-weight: 550; }
+    .anatomy-progress { width: 180px; height: 2px; margin: 12px 0 0 auto; overflow: hidden; background: rgba(25,27,28,.13); }
+    .anatomy-progress i { display: block; width: 0; height: 100%; background: var(--signal); }
+
+    .spinner-control { position: absolute; z-index: 12; left: 50%; bottom: 32px; transform: translateX(-50%); display: flex; align-items: center; gap: 13px; min-width: 176px; height: 46px; padding: 0 18px; border: 1px solid var(--line); border-radius: 6px; background: rgba(244,244,241,.82); box-shadow: 0 8px 26px rgba(25,27,28,.1); backdrop-filter: blur(14px); cursor: pointer; }
+    .spinner-control span { font-size: 13px; font-weight: 650; white-space: nowrap; }
+    .spinner-control i { width: 8px; height: 8px; border-radius: 50%; background: #85898a; box-shadow: 0 0 0 4px rgba(133,137,138,.14); transition: background .2s ease, box-shadow .2s ease; }
+    .spinner-control[aria-pressed="true"] { background: var(--graphite); color: #fff; }
+    .spinner-control[aria-pressed="true"] i { background: #d6a897; box-shadow: 0 0 0 4px rgba(214,168,151,.18); }
+
+    .detail-panel { position: absolute; z-index: 20; right: clamp(20px, 5vw, 76px); bottom: 92px; width: min(340px, calc(100% - 40px)); padding: 24px; border: 1px solid rgba(255,255,255,.28); border-radius: 7px; background: rgba(30,33,34,.94); color: #f4f4f1; box-shadow: var(--shadow); backdrop-filter: blur(18px); opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
+    .detail-panel.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .detail-panel small { color: #d6a897; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .detail-panel h2 { margin: 9px 36px 10px 0; font-size: 25px; font-weight: 500; }
+    .detail-panel p { margin: 0; color: rgba(244,244,241,.68); font-size: 13px; line-height: 1.75; }
+    .detail-panel button { position: absolute; top: 17px; right: 17px; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 4px; background: rgba(255,255,255,.08); color: #fff; cursor: pointer; }
+    .detail-panel button svg { width: 16px; }
+
+    .scroll-cue { position: absolute; z-index: 8; left: clamp(20px, 5vw, 76px); bottom: 30px; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; text-decoration: none; }
+    .scroll-cue::before { content: ""; width: 34px; height: 1px; background: currentColor; }
+
+    .product-info { background: var(--paper); border-top: 1px solid var(--line); }
+    .story { padding: clamp(78px, 10vw, 150px) clamp(20px, 7vw, 110px); display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: clamp(48px, 9vw, 150px); align-items: start; }
+    .story-kicker { margin: 0 0 22px; color: var(--signal); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .story h2 { max-width: 760px; margin: 0; font-size: clamp(36px, 5vw, 72px); line-height: 1.05; font-weight: 500; }
+    .story-copy { padding-top: 9px; }
+    .story-copy p { margin: 0 0 20px; color: var(--muted); font-size: 15px; line-height: 1.9; }
+    .feature-list { margin: 32px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+    .feature-list li { display: grid; grid-template-columns: 36px 1fr; gap: 14px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+    .feature-list b { color: var(--signal); font-size: 11px; }
+    .feature-list strong { display: block; font-size: 14px; font-weight: 650; }
+    .feature-list span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+    .gallery { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 1px; background: #bfc1bf; }
+    .product-photo { position: relative; margin: 0; min-width: 0; overflow: hidden; background: #d1d2cf; }
+    .product-photo img { width: 100%; height: 100%; min-height: 520px; display: block; object-fit: cover; transition: transform .7s cubic-bezier(.2,.7,.2,1); }
+    .product-photo:first-child img { object-position: center; }
+    .product-photo:hover img { transform: scale(1.025); }
+    .product-photo figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 42px 18px 16px; display: flex; justify-content: space-between; color: #fff; font-size: 11px; background: linear-gradient(transparent, rgba(0,0,0,.55)); }
+
+    .specs { padding: clamp(72px, 9vw, 130px) clamp(20px, 7vw, 110px); display: grid; grid-template-columns: .75fr 1.25fr; gap: clamp(40px, 8vw, 130px); }
+    .specs h2 { margin: 0; font-size: clamp(34px, 4vw, 58px); line-height: 1.08; font-weight: 500; }
+    .spec-table { margin: 0; }
+    .spec-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; padding: 17px 0; border-bottom: 1px solid var(--line); }
+    .spec-row dt { color: var(--muted); font-size: 12px; }
+    .spec-row dd { margin: 0; font-size: 13px; font-weight: 600; }
+    .note { grid-column: 2; margin: -12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+    .footer { min-height: 90px; padding: 28px clamp(20px, 7vw, 110px); display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+
+    @media (max-width: 900px) {
+      .hero { min-height: 760px; }
+      .intro { top: 120px; left: 50%; width: min(520px, calc(100% - 40px)); transform: translateX(-50%); text-align: center; }
+      .intro h1 br { display: none; }
+      .subtitle { max-width: 480px; margin-left: auto; margin-right: auto; }
+      .spec-line { justify-content: center; margin-top: 20px; padding-top: 16px; }
+      .toolrail { top: auto; right: 18px; bottom: 24px; transform: none; display: flex; }
+      .spinner-control { bottom: 24px; }
+      .mode-label, .scroll-cue { display: none; }
+      .anatomy-stage { left: 50%; right: auto; top: 224px; transform: translateX(-50%) translateY(-10px); text-align: center; }
+      .anatomy-stage.is-active { transform: translateX(-50%) translateY(0); }
+      .anatomy-progress { margin-left: auto; margin-right: auto; }
+      .detail-panel { left: 20px; right: auto; bottom: 86px; }
+      .story { grid-template-columns: 1fr; }
+      .story-copy { max-width: 720px; }
+      .gallery { grid-template-columns: 1fr 1fr; }
+      .product-photo:first-child { grid-column: 1 / -1; }
+      .product-photo img { min-height: 430px; aspect-ratio: 4 / 5; }
+      .product-photo:first-child img { aspect-ratio: 16 / 10; }
+      .specs { grid-template-columns: 1fr; }
+      .note { grid-column: 1; }
+    }
+    @media (max-width: 620px) {
+      .hero { min-height: 700px; }
+      .topbar { min-height: 64px; padding: 14px 16px; }
+      .edition { display: none; }
+      .view-switch button { min-width: 52px; height: 32px; }
+      .intro { top: 92px; }
+      .intro h1 { font-size: 42px; }
+      .subtitle { margin-top: 14px; font-size: 13px; line-height: 1.6; }
+      .spec-line { gap: 14px; }
+      .spec-line span { font-size: 9px; }
+      .spec-line strong { font-size: 11px; }
+      .toolrail { right: 12px; bottom: 14px; }
+      .icon-button { width: 40px; height: 40px; }
+      .toolrail .icon-button:nth-child(3), .toolrail .icon-button:nth-child(4) { display: none; }
+      .spinner-control { left: 14px; bottom: 14px; transform: none; min-width: 0; height: 40px; padding: 0 14px; }
+      .spinner-control span { font-size: 12px; }
+      .anatomy-stage { top: 198px; }
+      .anatomy-stage strong { font-size: 15px; }
+      .detail-panel { bottom: 70px; }
+      .story { padding-top: 68px; padding-bottom: 68px; gap: 36px; }
+      .story h2 { font-size: 36px; }
+      .gallery { grid-template-columns: 1fr; }
+      .product-photo:first-child { grid-column: auto; }
+      .product-photo img, .product-photo:first-child img { min-height: 0; aspect-ratio: 1 / 1; }
+      .spec-row { grid-template-columns: .8fr 1.2fr; gap: 16px; }
+      .footer { align-items: flex-start; flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero" aria-labelledby="productName">
+      <div class="scene-wrap" id="sceneWrap"><canvas id="scene" aria-label="可旋转的银色旋转戒指三维模型"></canvas></div>
+      <div class="grain"></div>
+
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>ORBIT RING</span><span class="edition">SPINNER / 01</span></div>
+        <div class="view-switch" aria-label="视角切换">
+          <button type="button" data-view="front" aria-pressed="true">正面</button>
+          <button type="button" data-view="side" aria-pressed="false">侧面</button>
+        </div>
+      </header>
+
+      <section class="intro">
+        <p class="eyebrow">Stainless steel · Kinetic jewelry</p>
+        <h1 id="productName">ORBIT<br />RING</h1>
+        <p class="subtitle">冷冽银色与可转动中环结合。拖动查看全貌，滚轮放大细节，点击戒指部件了解结构。</p>
+        <div class="spec-line">
+          <div><span>材质</span><strong>316L 不锈钢</strong></div>
+          <div><span>结构</span><strong>嵌入式旋转</strong></div>
+          <div><span>表面</span><strong>拉丝 / 镜面</strong></div>
+        </div>
+      </section>
+
+      <div class="toolrail" aria-label="3D 查看工具">
+        <button class="icon-button" id="explodeBtn" type="button" aria-label="播放拆解演示" aria-pressed="false" data-tooltip="拆解结构"><i data-lucide="scan-line"></i></button>
+        <button class="icon-button" id="resetBtn" type="button" aria-label="重置视角" data-tooltip="重置视角"><i data-lucide="rotate-ccw"></i></button>
+        <button class="icon-button" id="zoomInBtn" type="button" aria-label="放大"><i data-lucide="zoom-in"></i></button>
+        <button class="icon-button" id="zoomOutBtn" type="button" aria-label="缩小"><i data-lucide="zoom-out"></i></button>
+      </div>
+
+      <button class="spinner-control" id="spinBtn" type="button" aria-pressed="false"><i aria-hidden="true"></i><span>转动雕刻中环</span></button>
+      <span class="mode-label" id="modeLabel">Drag to rotate · Scroll to zoom · Click for detail</span>
+      <a class="scroll-cue" href="#story">Product story</a>
+
+      <div class="anatomy-stage" id="anatomyStage" aria-live="polite">
+        <span id="anatomyIndex">ANATOMY / 00</span>
+        <strong id="anatomyName">完整结构</strong>
+        <div class="anatomy-progress"><i id="anatomyProgress"></i></div>
+      </div>
+
+      <aside class="detail-panel" id="detailPanel" aria-live="polite">
+        <small id="detailType">ORBIT / DETAIL</small>
+        <h2 id="detailTitle">雕刻中环</h2>
+        <p id="detailCopy">中环可以独立旋转，连续的星象与自然符号随动作在光线中交替显现。</p>
+        <button type="button" id="detailClose" aria-label="关闭细节"><i data-lucide="x"></i></button>
+      </aside>
+    </section>
+
+    <section class="product-info" id="story" aria-labelledby="storyTitle">
+      <div class="story">
+        <div>
+          <p class="story-kicker">Designed for motion</p>
+          <h2 id="storyTitle">一枚戒指，保留手指下意识的小动作。</h2>
+        </div>
+        <div class="story-copy">
+          <p>宽版银色戒身由两侧抛光护圈包围拉丝中环。中环可独立转动，触感清晰而不过分松动，让饰品在静态造型之外多一层可感知的机械互动。</p>
+          <p>雕刻图案取自星象、海浪与自然意象。镜面边缘负责捕捉高光，细腻拉丝中段降低反射，两种表面处理让层次在不同角度下仍然清楚。</p>
+          <ul class="feature-list">
+            <li><b>01</b><div><strong>独立旋转中环</strong><span>无需电力，通过指尖拨动即可顺滑旋转。</span></div></li>
+            <li><b>02</b><div><strong>平齐窄边结构</strong><span>边缘与主体外径平齐，中间向内形成连续凹面。</span></div></li>
+            <li><b>03</b><div><strong>内壁圆润抛光</strong><span>减少边缘硌感，适合日常佩戴与反复把玩。</span></div></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="gallery" aria-label="戒指实物参考图">
+        <figure class="product-photo"><img src="assets/ring-front.png" alt="银色旋转戒指正面实物图" /><figcaption><span>正面层次</span><span>Front profile</span></figcaption></figure>
+        <figure class="product-photo"><img src="assets/ring-angle-a.png" alt="银色旋转戒指斜侧面实物图" /><figcaption><span>星象雕刻</span><span>Engraved symbols</span></figcaption></figure>
+        <figure class="product-photo"><img src="assets/ring-angle-b.png" alt="银色旋转戒指另一角度实物图" /><figcaption><span>内圈抛光</span><span>Polished interior</span></figcaption></figure>
+      </div>
+
+      <div class="story">
+        <div>
+          <p class="story-kicker">Nature edition</p>
+          <h2>同一结构，也可以换一套属于你的符号。</h2>
+        </div>
+        <div class="story-copy">
+          <p>中环图案可替换为森林、足迹、飞鸟或品牌标识。定制只改变雕刻层，不影响旋转结构与整体比例，因此可以在同一系列中保持一致的佩戴体验。</p>
+        </div>
+      </div>
+      <div class="gallery" style="grid-template-columns: 1fr;">
+        <figure class="product-photo"><img src="assets/ring-nature.png" alt="森林动物主题银色旋转戒指" style="min-height:0; aspect-ratio:2.1/1; object-fit:cover;" /><figcaption><span>自然主题版本</span><span>Custom engraving</span></figcaption></figure>
+      </div>
+
+      <div class="specs">
+        <h2>产品信息</h2>
+        <dl class="spec-table">
+          <div class="spec-row"><dt>产品类型</dt><dd>宽版旋转戒指 / Spinner ring</dd></div>
+          <div class="spec-row"><dt>主体材质</dt><dd>316L 不锈钢（展示建议）</dd></div>
+          <div class="spec-row"><dt>表面处理</dt><dd>镜面抛光边圈 + 拉丝中环</dd></div>
+          <div class="spec-row"><dt>结构组成</dt><dd>一体戒身 / 凹面雕刻中环 / 导向槽 / 内圈</dd></div>
+          <div class="spec-row"><dt>交互方式</dt><dd>中环独立 360° 旋转</dd></div>
+          <div class="spec-row"><dt>可定制项</dt><dd>尺寸、雕刻图案、表面工艺</dd></div>
+          <div class="spec-row"><dt>日常保养</dt><dd>软布擦拭，避免硬物反复摩擦雕刻面</dd></div>
+        </dl>
+        <p class="note">注：页面中的材质与结构参数依据参考图进行展示性建模，最终生产规格需以实物测量、样品或工厂图纸为准。</p>
+      </div>
+      <footer class="footer"><span>ORBIT RING / INTERACTIVE PRODUCT STUDY</span><span>360° VIEW · SPIN · EXPLODE · INSPECT</span></footer>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/"}}</script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+    lucide.createIcons();
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canvas = document.getElementById('scene');
+    const wrap = document.getElementById('sceneWrap');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2.5));
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight, false);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(29, wrap.clientWidth / wrap.clientHeight, .1, 100);
+    camera.position.set(7.4, 4.1, 8.8);
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = .065;
+    controls.enablePan = false;
+    controls.minDistance = 5.2;
+    controls.maxDistance = 15;
+    controls.target.set(.8, -.05, 0);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), .03).texture;
+    pmrem.dispose();
+    scene.add(new THREE.HemisphereLight(0xf7f8f8, 0x474b4e, 1.25));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
+    keyLight.position.set(-4, 7, 8);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    scene.add(keyLight);
+    const rimLight = new THREE.DirectionalLight(0xd9e7f0, 2.1);
+    rimLight.position.set(6, 1, -7);
+    scene.add(rimLight);
+    const warmLight = new THREE.PointLight(0xffd4bd, 22, 18, 2);
+    warmLight.position.set(-4, -2, 4);
+    scene.add(warmLight);
+    const stripLightA = new THREE.RectAreaLight(0xffffff, 10, 2.2, 7);
+    stripLightA.position.set(-4.5, 5.5, 5.5); stripLightA.lookAt(0, 0, 0); scene.add(stripLightA);
+    const stripLightB = new THREE.RectAreaLight(0xd8e3e7, 7, 1.4, 5.5);
+    stripLightB.position.set(5.5, 1.5, -4.5); stripLightB.lookAt(0, 0, 0); scene.add(stripLightB);
+
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(28, 28), new THREE.ShadowMaterial({ color: 0x1b1d1e, opacity: .16 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -2.52;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const silver = new THREE.MeshPhysicalMaterial({ color: 0xd3d5d5, metalness: 1, roughness: .075, clearcoat: .3, clearcoatRoughness: .06, envMapIntensity: 1.45 });
+    const brushed = new THREE.MeshPhysicalMaterial({ color: 0xb4b7b7, metalness: 1, roughness: .25, clearcoat: .04, clearcoatRoughness: .22, anisotropy: .9, anisotropyRotation: Math.PI / 2, envMapIntensity: 1.3 });
+    const innerSilver = new THREE.MeshPhysicalMaterial({ color: 0xc5c8c8, metalness: 1, roughness: .14, side: THREE.DoubleSide, envMapIntensity: 1.35 });
+    const grooveMat = new THREE.MeshStandardMaterial({ color: 0x202325, metalness: .82, roughness: .3 });
+
+    function annulusGeometry(outer, inner, depth, bevel = .045) {
+      const shape = new THREE.Shape();
+      shape.absarc(0, 0, outer, 0, Math.PI * 2, false);
+      const hole = new THREE.Path();
+      hole.absarc(0, 0, inner, 0, Math.PI * 2, true);
+      shape.holes.push(hole);
+      const geometry = new THREE.ExtrudeGeometry(shape, { depth, steps: 1, bevelEnabled: true, bevelSegments: 4, bevelSize: bevel, bevelThickness: bevel, curveSegments: 128 });
+      geometry.translate(0, 0, -depth / 2);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function recessedBandGeometry(radius, depth, radialSegments = 320, depthSegments = 18, recess = .055) {
+      const vertices = [], uvs = [], indices = [];
+      for (let y = 0; y <= depthSegments; y++) {
+        const v = y / depthSegments;
+        const z = (v - .5) * depth;
+        const curve = 1 - Math.pow(v * 2 - 1, 2);
+        const r = radius - recess * curve;
+        for (let x = 0; x <= radialSegments; x++) {
+          const u = x / radialSegments;
+          const theta = u * Math.PI * 2;
+          vertices.push(Math.cos(theta) * r, Math.sin(theta) * r, z);
+          uvs.push(u, v);
+        }
+      }
+      const stride = radialSegments + 1;
+      for (let y = 0; y < depthSegments; y++) {
+        for (let x = 0; x < radialSegments; x++) {
+          const a = y * stride + x, b = a + stride, c = b + 1, d = a + 1;
+          indices.push(a, b, d, b, c, d);
+        }
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function bandTextures() {
+      const width = 3072, height = 640;
+      const colorCanvas = document.createElement('canvas');
+      const roughCanvas = document.createElement('canvas');
+      const bumpCanvas = document.createElement('canvas');
+      [colorCanvas, roughCanvas, bumpCanvas].forEach(c => { c.width = width; c.height = height; });
+      const color = colorCanvas.getContext('2d');
+      const rough = roughCanvas.getContext('2d');
+      const bump = bumpCanvas.getContext('2d');
+      color.fillStyle = '#b9bcbc'; color.fillRect(0, 0, width, height);
+      rough.fillStyle = '#747474'; rough.fillRect(0, 0, width, height);
+      bump.fillStyle = '#808080'; bump.fillRect(0, 0, width, height);
+      for (let i = 0; i < 680; i++) {
+        const y = (Math.sin(i * 91.17) * .5 + .5) * height;
+        const alpha = .025 + (Math.sin(i * 17.73) * .5 + .5) * .055;
+        color.strokeStyle = `rgba(${i % 3 ? 255 : 55},${i % 3 ? 255 : 58},${i % 3 ? 255 : 60},${alpha})`;
+        color.lineWidth = i % 9 === 0 ? 1.4 : .55;
+        color.beginPath(); color.moveTo(0, y); color.lineTo(width, y); color.stroke();
+        rough.strokeStyle = `rgb(${82 + i % 44},${82 + i % 44},${82 + i % 44})`;
+        rough.lineWidth = .7; rough.beginPath(); rough.moveTo(0, y); rough.lineTo(width, y); rough.stroke();
+        bump.strokeStyle = i % 2 ? '#858585' : '#7b7b7b';
+        bump.lineWidth = .5; bump.beginPath(); bump.moveTo(0, y); bump.lineTo(width, y); bump.stroke();
+      }
+      function drawMotifs(ctx, stroke, lineWidth) {
+        ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        const cells = 20;
+        for (let i = 0; i < cells; i++) {
+          const x = (i + .5) * width / cells, y = height / 2;
+          ctx.save(); ctx.translate(x, y);
+          const type = i % 6;
+          if (type === 0) {
+            for (let j = -1; j <= 1; j++) { ctx.beginPath(); ctx.moveTo(-66, j*42); ctx.bezierCurveTo(-30,j*42-30,25,j*42+30,66,j*42); ctx.stroke(); }
+          } else if (type === 1) {
+            ctx.beginPath(); ctx.arc(0,10,58,Math.PI*.2,Math.PI*.8); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-52,36); ctx.quadraticCurveTo(0,-48,52,36); ctx.stroke();
+          } else if (type === 2) {
+            ctx.beginPath(); ctx.arc(0,0,42,0,Math.PI*2); ctx.stroke();
+            for (let a=0;a<8;a++){const q=a*Math.PI/4;ctx.beginPath();ctx.moveTo(Math.cos(q)*58,Math.sin(q)*58);ctx.lineTo(Math.cos(q)*82,Math.sin(q)*82);ctx.stroke();}
+          } else if (type === 3) {
+            ctx.beginPath(); ctx.arc(-16,0,52,-Math.PI/2,Math.PI/2); ctx.arc(16,0,52,Math.PI/2,-Math.PI/2,true); ctx.stroke();
+          } else if (type === 4) {
+            for(let j=-1;j<=1;j++){ctx.save();ctx.translate(j*50,j%2?20:-12);ctx.rotate(Math.PI/4);ctx.strokeRect(-15,-15,30,30);ctx.restore();}
+          } else {
+            ctx.beginPath();ctx.moveTo(0,-82);ctx.lineTo(0,72);ctx.moveTo(0,-50);ctx.lineTo(-45,-16);ctx.moveTo(0,-26);ctx.lineTo(45,7);ctx.moveTo(0,6);ctx.lineTo(-38,36);ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+      const colorMap = new THREE.CanvasTexture(colorCanvas);
+      const roughnessMap = new THREE.CanvasTexture(roughCanvas);
+      const bumpMap = new THREE.CanvasTexture(bumpCanvas);
+      colorMap.colorSpace = THREE.SRGBColorSpace;
+      [colorMap, roughnessMap, bumpMap].forEach(t => { t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.wrapS = THREE.RepeatWrapping; });
+      return { colorMap, roughnessMap, bumpMap };
+    }
+
+    const product = new THREE.Group();
+    product.position.set(1.05, -.02, 0);
+    product.rotation.set(.14, -.62, -.05);
+    scene.add(product);
+
+    const parts = [];
+    const partInfo = {
+      left: ['左侧抛光护圈', '镜面抛光护圈限定中环位置，并用连续高光勾勒戒指外轮廓。'],
+      center: ['雕刻旋转中环', '拉丝中环可绕戒指轴线独立旋转。星象与自然符号以深色雕刻形成清晰对比。'],
+      right: ['右侧抛光护圈', '与左侧护圈共同构成稳定边界，圆润倒角减少宽版戒指的边缘感。'],
+      liner: ['一体式内圈', '连续、圆润的抛光内壁贴合手指，隐藏外层旋转结构并提升佩戴舒适度。'],
+      grooves: ['中环导向槽', '两条深色窄槽分隔镜面与拉丝表面，同时为旋转中环保留微小运动间隙。']
+    };
+
+    function makePart(key, label, explode) {
+      const g = new THREE.Group();
+      g.name = label;
+      g.userData.key = key;
+      g.userData.base = new THREE.Vector3();
+      g.userData.explode = new THREE.Vector3(...explode);
+      product.add(g);
+      parts.push(g);
+      return g;
+    }
+    function tag(mesh, key) { mesh.userData.partKey = key; mesh.castShadow = true; mesh.receiveShadow = true; return mesh; }
+
+    const capSilver = silver.clone();
+    capSilver.side = THREE.DoubleSide;
+    const leftRim = makePart('left', '左侧抛光护圈', [-.45, .08, -2.45]);
+    const leftMesh = tag(new THREE.Mesh(new THREE.CylinderGeometry(2.13, 2.13, .28, 256, 1, true), silver), 'left');
+    leftMesh.rotation.x = Math.PI / 2; leftRim.add(leftMesh); leftRim.position.z = -.66;
+    const leftCap = tag(new THREE.Mesh(new THREE.RingGeometry(1.54, 2.13, 256), capSilver), 'left');
+    leftCap.position.z = -.141; leftRim.add(leftCap);
+    const leftOuter = tag(new THREE.Mesh(new THREE.TorusGeometry(2.10, .03, 20, 192), silver), 'left');
+    leftOuter.position.z = -.14; leftRim.add(leftOuter);
+
+    const rightRim = makePart('right', '右侧抛光护圈', [.45, -.08, 2.45]);
+    const rightMesh = tag(new THREE.Mesh(new THREE.CylinderGeometry(2.13, 2.13, .28, 256, 1, true), silver), 'right');
+    rightMesh.rotation.x = Math.PI / 2; rightRim.add(rightMesh); rightRim.position.z = .66;
+    const rightCap = tag(new THREE.Mesh(new THREE.RingGeometry(1.54, 2.13, 256), capSilver), 'right');
+    rightCap.position.z = .141; rightRim.add(rightCap);
+    const rightOuter = tag(new THREE.Mesh(new THREE.TorusGeometry(2.10, .03, 20, 192), silver), 'right');
+    rightOuter.position.z = .14; rightRim.add(rightOuter);
+
+    const centerBand = makePart('center', '雕刻旋转中环', [0, .55, 0]);
+    const bandMaps = bandTextures();
+    const engravedBrushed = new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: bandMaps.colorMap, roughnessMap: bandMaps.roughnessMap, bumpMap: bandMaps.bumpMap, bumpScale: .026, metalness: 1, roughness: .31, clearcoat: .035, clearcoatRoughness: .24, anisotropy: .92, anisotropyRotation: Math.PI / 2, envMapIntensity: 1.35 });
+    const brushedOuter = tag(new THREE.Mesh(recessedBandGeometry(2.13, .88, 320, 18, .075), engravedBrushed), 'center');
+    centerBand.add(brushedOuter);
+    const spinnerEdgeMaterial = brushed.clone();
+    spinnerEdgeMaterial.side = THREE.DoubleSide;
+    const spinnerInnerMaterial = innerSilver.clone();
+    spinnerInnerMaterial.side = THREE.BackSide;
+    const spinnerInner = tag(new THREE.Mesh(new THREE.CylinderGeometry(1.995, 1.995, .88, 256, 1, true), spinnerInnerMaterial), 'center');
+    spinnerInner.rotation.x = Math.PI / 2;
+    centerBand.add(spinnerInner);
+    [-.441, .441].forEach(z => {
+      const cap = tag(new THREE.Mesh(new THREE.RingGeometry(1.995, 2.13, 256), spinnerEdgeMaterial), 'center');
+      cap.position.z = z;
+      centerBand.add(cap);
+      const innerBevel = tag(new THREE.Mesh(new THREE.TorusGeometry(1.995, .012, 12, 192), spinnerEdgeMaterial), 'center');
+      innerBevel.position.z = z;
+      centerBand.add(innerBevel);
+    });
+
+    function addEtchedInlays() {
+      const inlayMaterial = new THREE.MeshStandardMaterial({ color: 0x292b2c, metalness: .7, roughness: .5 });
+      const segmentGeometry = new THREE.CylinderGeometry(.0085, .0085, 1, 7, 1, false);
+      const up = new THREE.Vector3(0, 1, 0);
+      const geometries = [];
+      const ellipse = (cx, cy, rx, ry, steps = 14) => Array.from({ length: steps + 1 }, (_, i) => {
+        const a = i / steps * Math.PI * 2;
+        return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry];
+      });
+      const arc = (cx, cy, rx, ry, start, end, steps = 10) => Array.from({ length: steps + 1 }, (_, i) => {
+        const a = THREE.MathUtils.lerp(start, end, i / steps);
+        return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry];
+      });
+      const diamond = (cx, cy, s) => [[cx,cy-s],[cx+s*.42,cy],[cx,cy+s],[cx-s*.42,cy],[cx,cy-s]];
+      const motifs = [
+        [
+          [[-1,-.55],[-.65,-.32],[-.3,-.55],[.05,-.32],[.4,-.55],[.75,-.32],[1,-.5]],
+          [[-1,0],[-.65,.23],[-.3,0],[.05,.23],[.4,0],[.75,.23],[1,.05]],
+          [[-1,.55],[-.65,.78],[-.3,.55],[.05,.78],[.4,.55],[.75,.78],[1,.6]]
+        ],
+        [
+          [[-1,.48],[-.72,.35],[-.45,.05],[-.18,-.48],[.05,-.72],[.3,-.38],[.18,-.06],[-.02,-.16],[.22,.22],[.58,.46],[1,.48]],
+          [[-.88,.62],[-.34,.62],[.18,.62],[.72,.62]]
+        ],
+        [
+          ellipse(-.05,0,.45,.42,16), ellipse(.57,-.02,.14,.13,9),
+          [[-.35,-.3],[-.62,-.62],[-.18,-.4]], [[.2,-.3],[.42,-.61],[.42,-.26]],
+          [[-.35,.3],[-.62,.62],[-.18,.4]], [[.2,.3],[.42,.61],[.42,.26]],
+          [[-.5,0],[-.7,-.08],[-.52,.12]]
+        ],
+        [
+          [[-1,.5],[1,.5]], arc(0,.5,.48,.62,Math.PI,Math.PI*2,12),
+          [[0,-.38],[0,-.78]], [[-.34,-.28],[-.52,-.62]], [[.34,-.28],[.52,-.62]],
+          [[-.55,.02],[-.83,-.18]], [[.55,.02],[.83,-.18]]
+        ],
+        [
+          arc(-.12,0,.58,.72,-Math.PI/2,Math.PI/2,14), arc(.13,0,.44,.56,Math.PI/2,-Math.PI/2,12)
+        ],
+        [
+          [[-.58,-.75],[-.58,.75]], [[.58,-.75],[.58,.75]],
+          [[-.58,-.75],[0,-.52],[.58,-.75]], [[-.58,.75],[0,.52],[.58,.75]]
+        ],
+        [diamond(-.52,.2,.31), diamond(.06,-.3,.24), diamond(.52,.34,.35)],
+        [
+          ellipse(-.32,-.2,.27,.27,12), ellipse(.32,.2,.27,.27,12),
+          [[-.55,-.02],[-.82,.2],[-.93,.5]], [[.55,.02],[.82,-.2],[.93,-.5]]
+        ],
+        [ellipse(-.12,.08,.38,.38,14), [[.16,-.2],[.68,-.72]], [[.42,-.72],[.68,-.72],[.68,-.45]]]
+      ];
+      for (let i = 0; i < motifs.length; i++) {
+        const motif = motifs[i];
+        const angle = i / motifs.length * Math.PI * 2 + .18;
+        for (const path of motif) {
+          for (let p = 0; p < path.length - 1; p++) {
+          const pointAt = point => {
+            const z = point[1] * .32;
+            const v = z / .44;
+            const radius = 2.13 - .075 * (1 - v * v) + .04;
+            const theta = angle + point[0] * .082;
+            return new THREE.Vector3(Math.cos(theta) * radius, Math.sin(theta) * radius, z);
+          };
+          const source = path[p], target = path[p + 1];
+          for (let s = 0; s < 4; s++) {
+            const t0 = s / 4, t1 = (s + 1) / 4;
+            const mix = t => [THREE.MathUtils.lerp(source[0], target[0], t), THREE.MathUtils.lerp(source[1], target[1], t)];
+            const start = pointAt(mix(t0)), end = pointAt(mix(t1));
+            const delta = end.clone().sub(start);
+            const position = start.clone().add(end).multiplyScalar(.5);
+            const quaternion = new THREE.Quaternion().setFromUnitVectors(up, delta.clone().normalize());
+            const matrix = new THREE.Matrix4().compose(position, quaternion, new THREE.Vector3(1, delta.length(), 1));
+            const geometry = segmentGeometry.clone();
+            geometry.applyMatrix4(matrix);
+            geometries.push(geometry);
+          }
+        }
+        }
+      }
+      const engravingGeometry = mergeGeometries(geometries, false);
+      geometries.forEach(g => g.dispose());
+      segmentGeometry.dispose();
+      const inlays = tag(new THREE.Mesh(engravingGeometry, inlayMaterial), 'center');
+      centerBand.add(inlays);
+    }
+    addEtchedInlays();
+
+    const grooves = makePart('grooves', '中环导向槽', [0, -.5, 0]);
+    [-.47, .47].forEach(z => { const mesh = tag(new THREE.Mesh(new THREE.TorusGeometry(2.124, .009, 16, 192), grooveMat), 'grooves'); mesh.position.z = z; grooves.add(mesh); });
+
+    const liner = makePart('liner', '一体式内圈', [0, 0, 3.65]);
+    const linerMesh = tag(new THREE.Mesh(annulusGeometry(1.985, 1.54, 1.54, .035), innerSilver), 'liner');
+    liner.add(linerMesh);
+
+    const edgeHighlight = new THREE.MeshPhysicalMaterial({ color: 0xe5e7e7, metalness: 1, roughness: .08 });
+    [-.80, .80].forEach(z => {
+      const lip = tag(new THREE.Mesh(new THREE.TorusGeometry(1.63, .035, 12, 160), edgeHighlight), z < 0 ? 'left' : 'right');
+      lip.position.z = z < 0 ? -.14 : .14;
+      (z < 0 ? leftRim : rightRim).add(lip);
+    });
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let pointerDown = null;
+    let selectedBox = null;
+    let spinnerOn = false;
+    let spinnerSpeed = 0;
+    let anatomy = 0;
+    let anatomyTarget = 0;
+    let anatomyAnimation = null;
+    let viewTween = null;
+
+    function ease(t) { return t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+    function smoothstep(t) { t = THREE.MathUtils.clamp(t, 0, 1); return t*t*(3-2*t); }
+    function targetQuaternion(x, y, z) { return new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z)); }
+
+    function showDetail(key) {
+      const info = partInfo[key];
+      if (!info) return;
+      document.getElementById('detailTitle').textContent = info[0];
+      document.getElementById('detailCopy').textContent = info[1];
+      document.getElementById('detailType').textContent = `ORBIT / ${key.toUpperCase()}`;
+      document.getElementById('detailPanel').classList.add('is-open');
+      if (selectedBox) { scene.remove(selectedBox); selectedBox.geometry.dispose(); selectedBox.material.dispose(); }
+      const target = parts.find(p => p.userData.key === key) || product;
+      selectedBox = new THREE.BoxHelper(target, 0x9a3f2e);
+      selectedBox.material.transparent = true; selectedBox.material.opacity = .7;
+      scene.add(selectedBox);
+      camera.position.lerp(camera.position.clone().normalize().multiplyScalar(6.1), .45);
+    }
+    function closeDetail() {
+      document.getElementById('detailPanel').classList.remove('is-open');
+      if (selectedBox) { scene.remove(selectedBox); selectedBox.geometry.dispose(); selectedBox.material.dispose(); selectedBox = null; }
+    }
+
+    canvas.addEventListener('pointerdown', e => { pointerDown = { x: e.clientX, y: e.clientY }; });
+    canvas.addEventListener('pointerup', e => {
+      if (!pointerDown || Math.hypot(e.clientX-pointerDown.x, e.clientY-pointerDown.y) > 5 || anatomy > .02) return;
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((e.clientX-rect.left)/rect.width)*2-1;
+      pointer.y = -((e.clientY-rect.top)/rect.height)*2+1;
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObjects(product.children, true).find(x => x.object.userData.partKey);
+      if (hit) showDetail(hit.object.userData.partKey);
+      pointerDown = null;
+    });
+    document.getElementById('detailClose').addEventListener('click', closeDetail);
+
+    document.getElementById('spinBtn').addEventListener('click', () => {
+      spinnerOn = !spinnerOn;
+      const btn = document.getElementById('spinBtn');
+      btn.setAttribute('aria-pressed', String(spinnerOn));
+      btn.querySelector('span').textContent = spinnerOn ? '停止雕刻中环' : '转动雕刻中环';
+    });
+
+    document.getElementById('explodeBtn').addEventListener('click', () => {
+      closeDetail();
+      anatomyTarget = anatomyTarget > .5 ? 0 : 1;
+      anatomyAnimation = { from: anatomy, to: anatomyTarget, start: performance.now(), duration: (reducedMotion ? 450 : 4000) * Math.max(.25, Math.abs(anatomyTarget-anatomy)) };
+      const open = anatomyTarget === 1;
+      const btn = document.getElementById('explodeBtn');
+      btn.setAttribute('aria-pressed', String(open));
+      btn.setAttribute('aria-label', open ? '重新组装戒指' : '播放拆解演示');
+      document.getElementById('anatomyStage').classList.add('is-active');
+      document.getElementById('modeLabel').textContent = open ? 'ANATOMY SEQUENCE · 05 PARTS' : 'REASSEMBLY SEQUENCE';
+      viewTween = { from: product.quaternion.clone(), to: targetQuaternion(.08, -.12, -.02), start: performance.now(), duration: 900 };
+    });
+
+    function setView(view) {
+      closeDetail();
+      const front = view === 'front';
+      document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+      viewTween = { from: product.quaternion.clone(), to: front ? targetQuaternion(.14, -.62, -.05) : targetQuaternion(.08, -1.18, 0), start: performance.now(), duration: reducedMotion ? 20 : 900 };
+    }
+    document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      closeDetail(); setView('front');
+      controls.target.set(innerWidth < 900 ? 0 : .8, innerWidth < 900 ? -.75 : -.05, 0);
+      camera.position.set(7.4, 4.1, 8.8); controls.update();
+    });
+    document.getElementById('zoomInBtn').addEventListener('click', () => camera.position.multiplyScalar(.86));
+    document.getElementById('zoomOutBtn').addEventListener('click', () => camera.position.multiplyScalar(1.14));
+
+    const anatomyNames = ['左侧抛光护圈', '中环导向槽', '雕刻旋转中环', '右侧抛光护圈', '一体式内圈'];
+    let last = performance.now();
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now-last)/1000, .05); last = now;
+      spinnerSpeed = THREE.MathUtils.damp(spinnerSpeed, spinnerOn && anatomy < .06 ? .72 : 0, 4.2, dt);
+      centerBand.rotation.z += spinnerSpeed * dt;
+      grooves.rotation.z += spinnerSpeed * dt;
+
+      if (anatomyAnimation) {
+        const t = THREE.MathUtils.clamp((now-anatomyAnimation.start)/anatomyAnimation.duration, 0, 1);
+        anatomy = THREE.MathUtils.lerp(anatomyAnimation.from, anatomyAnimation.to, ease(t));
+        if (t === 1) {
+          anatomy = anatomyAnimation.to; anatomyAnimation = null;
+          if (anatomy === 0) { document.getElementById('anatomyStage').classList.remove('is-active'); document.getElementById('modeLabel').textContent = 'DRAG TO ROTATE · SCROLL TO ZOOM · CLICK FOR DETAIL'; }
+        }
+      }
+      const ordered = [leftRim, grooves, centerBand, rightRim, liner];
+      ordered.forEach((part, index) => {
+        const start = index / ordered.length * .62;
+        const local = smoothstep((anatomy-start)/.38);
+        const base = part.userData.base.clone();
+        if (part === leftRim) base.z = -.66;
+        if (part === rightRim) base.z = .66;
+        part.position.lerp(base.addScaledVector(part.userData.explode, local), .16);
+      });
+      const active = Math.min(anatomyNames.length-1, Math.floor(anatomy*anatomyNames.length));
+      document.getElementById('anatomyIndex').textContent = `${anatomyTarget ? 'ANATOMY' : 'REASSEMBLY'} / ${String(active+1).padStart(2,'0')}`;
+      document.getElementById('anatomyName').textContent = anatomyNames[anatomyTarget ? active : anatomyNames.length-1-active];
+      document.getElementById('anatomyProgress').style.width = `${anatomy*100}%`;
+
+      if (viewTween) {
+        const t = THREE.MathUtils.clamp((now-viewTween.start)/viewTween.duration, 0, 1);
+        product.quaternion.slerpQuaternions(viewTween.from, viewTween.to, ease(t));
+        if (t === 1) viewTween = null;
+      }
+      if (selectedBox) selectedBox.update();
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+
+    function resize() {
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2.5));
+      renderer.setSize(w, h, false);
+      camera.aspect = w/h; camera.updateProjectionMatrix();
+      product.position.x = w < 900 ? 0 : 1.05;
+      product.position.y = w < 900 ? -.8 : -.02;
+      controls.target.set(w < 900 ? 0 : .8, w < 900 ? -.8 : -.05, 0);
+    }
+    addEventListener('resize', resize); resize();
+  </script>
+</body>
+</html>
