@@ -145,7 +145,17 @@
       .toolrail .icon-button:nth-child(3), .toolrail .icon-button:nth-child(4) { display: none; }
       .spinner-control { left: 14px; bottom: 14px; transform: none; min-width: 0; height: 40px; padding: 0 14px; }
       .spinner-control span { font-size: 12px; }
-      .anatomy-stage { top: 198px; }
+      .anatomy-stage {
+        top: auto;
+        bottom: 72px;
+        width: min(220px, calc(100% - 40px));
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: rgba(244,244,241,.82);
+        box-shadow: 0 8px 24px rgba(25,27,28,.1);
+        backdrop-filter: blur(12px);
+      }
       .anatomy-stage strong { font-size: 15px; }
       .detail-panel { bottom: 70px; }
       .story { padding-top: 68px; padding-bottom: 68px; gap: 36px; }
