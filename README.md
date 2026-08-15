@@ -9,3 +9,5 @@ Interactive Three.js product page for the ORBIT spinner ring.
 <img alt="ORBIT ring photo 2" src="https://github.com/user-attachments/assets/2eae339a-d202-49b9-a794-da4e90f91741" width="720" />
 
 <img alt="ORBIT ring photo 3" src="https://github.com/user-attachments/assets/68e8db48-d938-4190-8136-f005ea924d93" width="720" />
+
+<img alt="ORBIT ring nature photo" src="https://github.com/user-attachments/assets/b9bcd3b1-48ba-4894-b957-5f35f7eada13" width="720" />
